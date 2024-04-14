@@ -1,56 +1,76 @@
-<#
-Create a New VM from a Snapshot
-Ref: https://docs.microsoft.com/en-us/azure/virtual-machines/scripts/virtual-machines-windows-powershell-sample-create-vm-from-snapshot?toc=%2fpowershell%2fmodule%2ftoc.json
-#>
+# Provide the subscription Id
+subscriptionId='2fbf906e-1101-4bc0-b64f-adc44e462fff'
 
-#Provide the subscription Id
-$subscriptionId = '2fbf906e-1101-4bc0-b64f-adc44e462fff'
+# Provide the name of your resource group
+resourceGroupName='LB'
 
-#Provide the name of your resource group
-$resourceGroupName = 'LB'
+# Provide the name of the snapshot that will be used to create OS disk
+snapshotName='web1-snapshot'
 
-#Provide the name of the snapshot that will be used to create OS disk
-$snapshotName = 'web1-snapshot'
+# Provide the name of the OS disk that will be created using the snapshot
+osDiskName='web1_OsDisk_1_910158270e0b4a4893ba269b1301c609'
 
-#Provide the name of the OS disk that will be created using the snapshot
-$osDiskName = 'web1_OsDisk_1_910158270e0b4a4893ba269b1301c609'
+# Provide the name of an existing virtual network where virtual machine will be created
+virtualNetworkName='hybrid-rg'
 
-#Provide the name of an existing virtual network where virtual machine will be created
-$virtualNetworkName = 'hybrid-rg'
+# Provide the name of the virtual machine
+virtualMachineName='web1'
 
-#Provide the name of the virtual machine
-$virtualMachineName = 'web1'
+# Provide the size of the virtual machine
+# e.g. Standard_DS3
+# Get all the vm sizes in a region using below script:
+# e.g. az vm list-sizes --location 'East US 2'
+virtualMachineSize='Standard_D3_v2'
 
-#Provide the size of the virtual machine
-#e.g. Standard_DS3
-#Get all the vm sizes in a region using below script:
-#e.g. Get-AzureRmVMSize -Location 'East US 2'
-$virtualMachineSize = 'Standard_D3_v2'
+# Set the context to the subscription Id where Managed Disk will be created
+az account set --subscription $subscriptionId
 
-#Set the context to the subscription Id where Managed Disk will be created
-Select-AzureRmSubscription -SubscriptionId $SubscriptionId
+# Get the snapshot details
+snapshot=$(az snapshot show --resource-group $resourceGroupName --name $snapshotName)
 
-$snapshot = Get-AzureRmSnapshot -ResourceGroupName $resourceGroupName -SnapshotName $snapshotName
+# Get the location of the snapshot
+snapshotLocation=$(echo $snapshot | jq -r '.location')
 
-$diskConfig = New-AzureRmDiskConfig -Location $snapshot.Location -SourceResourceId $snapshot.Id -CreateOption Copy
+# Get the ID of the snapshot
+snapshotId=$(echo $snapshot | jq -r '.id')
 
-$disk = New-AzureRmDisk -Disk $diskConfig -ResourceGroupName 'restore' -DiskName $osDiskName
+# Create disk configuration
+diskConfig=$(az disk create --location $snapshotLocation --source $snapshotId --create-option Copy)
 
-#Initialize virtual machine configuration
-$VirtualMachine = New-AzureRmVMConfig -VMName $virtualMachineName -VMSize $virtualMachineSize
+# Extract disk ID from diskConfig
+diskId=$(echo $diskConfig | jq -r '.id')
 
-#Use the Managed Disk Resource Id to attach it to the virtual machine. Please change the OS type to linux if OS disk has linux OS
-$VirtualMachine = Set-AzureRmVMOSDisk -VM $VirtualMachine -ManagedDiskId $disk.Id -CreateOption Attach -Windows
+# Initialize virtual machine configuration
+VirtualMachine=$(az vm create \
+    --resource-group $resourceGroupName \
+    --name $virtualMachineName \
+    --location $snapshotLocation \
+    --size $virtualMachineSize \
+    --nics $nicId \
+    --os-disk $diskId \
+    --attach-os-disk attach)
 
-#Create a public IP for the VM
-$publicIp = New-AzureRmPublicIpAddress -Name ($VirtualMachineName.ToLower() + '_ip') -ResourceGroupName $resourceGroupName -Location $snapshot.Location -AllocationMethod Dynamic
+# Create a public IP for the VM
+publicIp=$(az network public-ip create \
+    --resource-group $resourceGroupName \
+    --name ${virtualMachineName,,}_ip \
+    --location $snapshotLocation \
+    --allocation-method Dynamic)
 
-#Get the virtual network where virtual machine will be hosted
-$vnet = Get-AzureRmVirtualNetwork -Name 'hybrid-vnet' -ResourceGroupName 'hybrid-rg'
+# Get the virtual network where virtual machine will be hosted
+vnet=$(az network vnet show --name $virtualNetworkName --resource-group $resourceGroupName)
 
 # Create NIC in the first subnet of the virtual network
-$nic = New-AzureRmNetworkInterface -Name ($VirtualMachineName.ToLower() + '_nic') -ResourceGroupName $resourceGroupName -Location $snapshot.Location -SubnetId $vnet.Subnets[0].Id -PublicIpAddressId $publicIp.Id
+nic=$(az network nic create \
+    --resource-group $resourceGroupName \
+    --name ${virtualMachineName,,}_nic \
+    --location $snapshotLocation \
+    --vnet-name $virtualNetworkName \
+    --subnet $(echo $vnet | jq -r '.subnets[0].id') \
+    --public-ip-address $publicIp)
 
-$VirtualMachine = Add-AzureRmVMNetworkInterface -VM $VirtualMachine -Id $nic.Id
+# Extract NIC ID from NIC
+nicId=$(echo $nic | jq -r '.id')
 
-New-AzureRmVM -VM $VirtualMachine -ResourceGroupName 'restore' -Location $snapshot.Location
+# Update VM with NIC
+az vm nic add --resource-group $resourceGroupName --vm-name $virtualMachineName --nics $nicId

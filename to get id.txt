@@ -1,3 +1,11 @@
 snapshotId=$(az snapshot list --query "[?properties.managedBy.contains('$resourceGroupName') && properties.managedBy.contains('$vmName')].id | [0]" -o tsv)
 
 snapshotName=$(az snapshot list --query "[?properties.managedBy.contains('$resourceGroupName') && properties.managedBy.contains('$vmName')].name | [0]" -o tsv)
+
+# Create NIC in the first subnet of the virtual network
+az network nic create \
+    --name $nicName \
+    --resource-group $resourceGroupName \
+    --location $snapshotLocation \
+    --subnet $(az network vnet subnet show --name default --vnet-name $virtualNetworkName --resource-group $resourceGroupName --query id --output tsv) \
+    --public-ip-address $publicIpId

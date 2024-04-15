@@ -1,0 +1,1 @@
+snapshotId=$(az snapshot list --query "[?properties.managedBy.contains('$resourceGroupName') && properties.managedBy.contains('$vmName')].id | [0]" -o tsv)

@@ -11,3 +11,20 @@ az network nic create \
     --location $snapshotLocation \
     --subnet $(az network vnet subnet show --name default --vnet-name $virtualNetworkName --resource-group $resourceGroupName --query id --output tsv) \
     --public-ip-address $publicIpId
+
+
+
+az : ERROR: (InvalidResourceReference) Resource 
+/subscriptions/91da15f8-3ba9-4916-afe1-da3b8651e6d5/resourceGroups/az-ha-dev-usva-rg/providers/Microsoft.Network/virtualNetworks/az-opa-dev-usva-vnet/subnets/AppSubnet referenced by 
+resource /subscriptions/91da15f8-3ba9-4916-afe1-da3b8651e6d5/resourceGroups/az-ha-dev-usva-rg/providers/Microsoft.Network/networkInterfaces/hadr-nic was not found. Please make sure that the 
+referenced resource exists, and that both resources are in the same region.
+At line:1 char:8
++ $nic = az network nic create --resource-group $resourceGroupName --na ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ERROR: (Invalid...he same region.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Code: InvalidResourceReference
+Message: Resource /subscriptions/91da15f8-3ba9-4916-afe1-da3b8651e6d5/resourceGroups/az-ha-dev-usva-rg/providers/Microsoft.Network/virtualNetworks/az-opa-dev-usva-vnet/subnets/AppSubnet 
+referenced by resource /subscriptions/91da15f8-3ba9-4916-afe1-da3b8651e6d5/resourceGroups/az-ha-dev-usva-rg/providers/Microsoft.Network/networkInterfaces/hadr-nic was not found. Please make 
+sure that the referenced resource exists, and that both resources are in the same region.

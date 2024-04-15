@@ -2,6 +2,8 @@ snapshotId=$(az snapshot list --query "[?properties.managedBy.contains('$resourc
 
 snapshotName=$(az snapshot list --query "[?properties.managedBy.contains('$resourceGroupName') && properties.managedBy.contains('$vmName')].name | [0]" -o tsv)
 
+nicName="${virtualMachineName,,}_nic"
+
 # Create NIC in the first subnet of the virtual network
 az network nic create \
     --name $nicName \

@@ -180,3 +180,13 @@ INFO: telemetry.process: Creating upload process: "C:\Program Files (x86)\Micros
 SDKs\Azure\CLI2\Lib\site-packages\azure\cli\telemetry\__init__.pyc C:\Users\fongwaacha\.azure"
 INFO: telemetry.process: Return from creating process
 INFO: telemetry.main: Finish creating telemetry upload process.
+
+
+
+
+VNetresourceGroupName="your_resource_group_name"
+virtualNetworkName="your_virtual_network_name"
+
+# Retrieve the virtual network
+vnet=$(az network vnet show --resource-group $resourceGroupName --name $virtualNetworkName)
+vnetName=$(echo $vnet | jq -r '.name')

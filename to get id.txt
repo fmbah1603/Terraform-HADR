@@ -42,3 +42,104 @@ virtualNetworkName="your_virtual_network_name"
 # Retrieve the virtual network
 vnet=$(az network vnet show --resource-group $resourceGroupName --name $virtualNetworkName)
 vnetName=$(echo $vnet | jq -r '.name')
+
+
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_app_service_plan" "example" {
+  name                = "example-appserviceplan"
+  location            = "East US"  # Update with your desired location for the first App Service Plan
+  resource_group_name = "example-resources"
+  kind                = "Windows"
+  reserved            = true
+  sku {
+    tier = "Standard"
+    size = "S1"
+  }
+}
+
+resource "azurerm_app_service" "example" {
+  name                = "example-appservice"
+  location            = "East US"  # Update with your desired location for the first App Service
+  resource_group_name = "example-resources"
+  app_service_plan_id = azurerm_app_service_plan.example.id
+}
+
+resource "azurerm_app_service_plan" "example2" {
+  name                = "example-appserviceplan2"
+  location            = "West Europe"  # Update with your desired location for the second App Service Plan
+  resource_group_name = "example-resources"
+  kind                = "Windows"
+  reserved            = true
+  sku {
+    tier = "Standard"
+    size = "S1"
+  }
+}
+
+resource "azurerm_app_service" "example2" {
+  name                = "example-appservice2"
+  location            = "West Europe"  # Update with your desired location for the second App Service
+  resource_group_name = "example-resources"
+  app_service_plan_id = azurerm_app_service_plan.example2.id
+}
+
+resource "azurerm_traffic_manager_profile" "example" {
+  name                = "example-trafficmanager"
+  resource_group_name = "example-resources"
+  profile_status      = "Enabled"
+  traffic_routing_method = "Priority"
+
+  dns_config {
+    relative_name = "example"
+    ttl           = 60
+  }
+
+  monitor_config {
+    protocol   = "HTTP"
+    port       = 80
+    path       = "/"
+    interval   = 30
+    timeout    = 10
+    tolerated_failures = 3
+  }
+
+  # Endpoint for the first App Service
+  # Priority 1
+  endpoint {
+    name                = "appservice1-endpoint"
+    target_resource_id  = azurerm_app_service.example.id
+    type                = "AzureEndpoints"
+    priority            = 1
+  }
+
+  # Endpoint for the second App Service
+  # Priority 2
+  endpoint {
+    name                = "appservice2-endpoint"
+    target_resource_id  = azurerm_app_service.example2.id
+    type                = "AzureEndpoints"
+    priority            = 2
+  }
+}
+
+# Endpoint for the second App Service
+  # Priority 2
+  endpoint {
+    name                = "appservice2-endpoint"
+    target_resource_id  = azurerm_app_service.example2.id
+    type                = "AzureEndpoints"
+    priority            = 2
+  }
+
+# SQL IaaS server
+resource "azurerm_sql_server" "example" {
+  name                         = "example-sqlserver"
+  resource_group_name          = "example-resources"
+  location                     = "East US"  # Update with your desired location for the SQL IaaS server
+  version                      = "12.0"  # Update with your desired SQL Server version
+  administrator_login          = "sqladmin"  # Update with your desired SQL administrator login
+  administrator_login_password = "Password123!"  # Update with your desired SQL administrator password
+}

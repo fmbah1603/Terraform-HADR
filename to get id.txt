@@ -28,3 +28,6 @@ Code: InvalidResourceReference
 Message: Resource /subscriptions/91da15f8-3ba9-4916-afe1-da3b8651e6d5/resourceGroups/az-ha-dev-usva-rg/providers/Microsoft.Network/virtualNetworks/az-opa-dev-usva-vnet/subnets/AppSubnet 
 referenced by resource /subscriptions/91da15f8-3ba9-4916-afe1-da3b8651e6d5/resourceGroups/az-ha-dev-usva-rg/providers/Microsoft.Network/networkInterfaces/hadr-nic was not found. Please make 
 sure that the referenced resource exists, and that both resources are in the same region.
+
+az network public-ip create --resource-group myResourceGroup --name myPublicIP --sku Standard --version IPv4 --zone 1 2 3
+az network nic create --resource-group myResourceGroup --name myNIC --private-ip-address-version IPv4 --vnet-name myVNet --subnet myBackEndSubnet --public-ip-address myPublicIP

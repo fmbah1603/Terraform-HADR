@@ -1,0 +1,38 @@
+provider "azurerm" {
+  features {}
+}
+
+# Azure Site Recovery Configuration
+resource "azurerm_recovery_services_protection_container" "example" {
+  name                = "example-protection-container"
+  resource_group_name = "example-resources"
+  recovery_vault_name = "example-recovery-services-vault"  # Update with your existing recovery services vault name
+  source_vm_id        = "source-vm-resource-id"  # Update with the resource ID of the VM to be failed over
+}
+
+resource "azurerm_recovery_services_protection_container_mapping" "example" {
+  name                          = "example-protection-container-mapping"
+  resource_group_name           = "example-resources"
+  recovery_vault_name           = "example-recovery-services-vault"  # Update with your existing recovery services vault name
+  source_id                     = "source-vm-resource-id"  # Update with the resource ID of the VM to be failed over
+  target_protection_container_id = azurerm_recovery_services_protection_container.example.id
+}
+
+resource "azurerm_recovery_services_fo_replication_protected_item" "example" {
+  name                     = "example-replication-protected-item"
+  resource_group_name      = "example-resources"
+  recovery_vault_name      = "example-recovery-services-vault"  # Update with your existing recovery services vault name
+  source_vm_id             = "source-vm-resource-id"  # Update with the resource ID of the VM to be failed over
+  recovery_protection_container_id = azurerm_recovery_services_protection_container.example.id
+}
+
+# Initiate Failover
+resource "azurerm_recovery_services_fo_replication_protected_item" "example" {
+  name                     = "example-failover"
+  resource_group_name      = "example-resources"
+  recovery_vault_name      = "example-recovery-services-vault"  # Update with your existing recovery services vault name
+  source_vm_id             = "source-vm-resource-id"  # Update with the resource ID of the VM to be failed over
+  recovery_protection_container_id = azurerm_recovery_services_protection_container.example.id
+
+  target_region = "West Europe"  # Specify the target region for failover
+}

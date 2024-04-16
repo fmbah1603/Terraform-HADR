@@ -48,6 +48,7 @@ provider "azurerm" {
   features {}
 }
 
+# App Service Plan 1
 resource "azurerm_app_service_plan" "example" {
   name                = "example-appserviceplan"
   location            = "East US"  # Update with your desired location for the first App Service Plan
@@ -60,6 +61,7 @@ resource "azurerm_app_service_plan" "example" {
   }
 }
 
+# App Service 1
 resource "azurerm_app_service" "example" {
   name                = "example-appservice"
   location            = "East US"  # Update with your desired location for the first App Service
@@ -67,6 +69,7 @@ resource "azurerm_app_service" "example" {
   app_service_plan_id = azurerm_app_service_plan.example.id
 }
 
+# App Service Plan 2
 resource "azurerm_app_service_plan" "example2" {
   name                = "example-appserviceplan2"
   location            = "West Europe"  # Update with your desired location for the second App Service Plan
@@ -79,6 +82,7 @@ resource "azurerm_app_service_plan" "example2" {
   }
 }
 
+# App Service 2
 resource "azurerm_app_service" "example2" {
   name                = "example-appservice2"
   location            = "West Europe"  # Update with your desired location for the second App Service
@@ -86,6 +90,26 @@ resource "azurerm_app_service" "example2" {
   app_service_plan_id = azurerm_app_service_plan.example2.id
 }
 
+# SQL IaaS server
+resource "azurerm_sql_server" "example" {
+  name                         = "example-sqlserver"
+  resource_group_name          = "example-resources"
+  location                     = "East US"  # Update with your desired location for the SQL IaaS server
+  version                      = "12.0"  # Update with your desired SQL Server version
+  administrator_login          = "sqladmin"  # Update with your desired SQL administrator login
+  administrator_login_password = "Password123!"  # Update with your desired SQL administrator password
+}
+
+# Recovery Services Vault Backup Policy
+resource "azurerm_recovery_services_vault_backup_policy_association" "example" {
+  recovery_services_vault_name = "example-vault"  # Update with your existing Recovery Services Vault name
+  resource_group_name          = "example-resources"
+  policy_id                    = "existing-backup-policy-id"  # Update with the ID of your existing backup policy
+  type                         = "SQL"  # Type of the resource to associate with the backup policy, in this case, SQL
+  source_resource_id           = azurerm_sql_server.example.id
+}
+
+# Azure Traffic Manager
 resource "azurerm_traffic_manager_profile" "example" {
   name                = "example-trafficmanager"
   resource_group_name = "example-resources"
@@ -123,23 +147,4 @@ resource "azurerm_traffic_manager_profile" "example" {
     type                = "AzureEndpoints"
     priority            = 2
   }
-}
-
-# Endpoint for the second App Service
-  # Priority 2
-  endpoint {
-    name                = "appservice2-endpoint"
-    target_resource_id  = azurerm_app_service.example2.id
-    type                = "AzureEndpoints"
-    priority            = 2
-  }
-
-# SQL IaaS server
-resource "azurerm_sql_server" "example" {
-  name                         = "example-sqlserver"
-  resource_group_name          = "example-resources"
-  location                     = "East US"  # Update with your desired location for the SQL IaaS server
-  version                      = "12.0"  # Update with your desired SQL Server version
-  administrator_login          = "sqladmin"  # Update with your desired SQL administrator login
-  administrator_login_password = "Password123!"  # Update with your desired SQL administrator password
 }

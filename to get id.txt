@@ -278,3 +278,12 @@ astus" {
 }
 
 azurerm_virtual_machine.vm.storage_os_disk[0].managed_disk_id
+
+
+
+
+data "azurerm_managed_disk" "existing" {
+  name                = "example-datadisk"
+  resource_group_name = "example-resources"
+}
+source_resource_id

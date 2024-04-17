@@ -287,3 +287,8 @@ data "azurerm_managed_disk" "existing" {
   resource_group_name = "example-resources"
 }
 source_resource_id
+
+
+│   with azurerm_site_recovery_replicated_vm.vm-replication,
+│   on failover.tf line 152, in resource "azurerm_site_recovery_replicated_vm" "vm-replication":
+│  152: resource "azurerm_site_recovery_replicated_vm" "vm-replication" {

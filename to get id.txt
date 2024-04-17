@@ -242,3 +242,5 @@ resource "azurerm_traffic_manager_azure_endpoint" "example" {
   target_resource_id   = azurerm_public_ip.example.id
 }
 
+
+https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/site_recovery_replication_recovery_plan

@@ -265,3 +265,14 @@ data "terraform_remote_state" "vm_state" {
 output "referenced_os_disk_properties" {
   value = data.terraform_remote_state.vm_state.outputs.os_disk_properties
 }
+astus" {
+  backend = "azurerm"
+
+  config {
+    storage_account_name = "xxxxx"
+    container_name       = "xxxxx"
+    environment          = "public"
+    resource_group_name  = "xxxxx"
+    key                  = "dev-eastus.terraform.tfstate"
+  }
+}

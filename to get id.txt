@@ -244,3 +244,8 @@ resource "azurerm_traffic_manager_azure_endpoint" "example" {
 
 
 https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/site_recovery_replication_recovery_plan
+
+
+output "os_disk_properties" {
+  value = azurerm_linux_virtual_machine.example.os_disk
+}

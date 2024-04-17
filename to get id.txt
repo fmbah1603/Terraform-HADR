@@ -292,3 +292,12 @@ source_resource_id
 │   with azurerm_site_recovery_replicated_vm.vm-replication,
 │   on failover.tf line 152, in resource "azurerm_site_recovery_replicated_vm" "vm-replication":
 │  152: resource "azurerm_site_recovery_replicated_vm" "vm-replication" {
+
+
+
+│ Error: expected "managed_disk.0.disk_id" to not be an empty string, got
+│
+│   with azurerm_site_recovery_replicated_vm.vm-replication,
+│   on failover.tf line 152, in resource "azurerm_site_recovery_replicated_vm" "vm-replication":
+│  152: resource "azurerm_site_recovery_replicated_vm" "vm-replication" {
+

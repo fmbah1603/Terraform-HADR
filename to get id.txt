@@ -249,3 +249,19 @@ https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/
 output "os_disk_properties" {
   value = azurerm_linux_virtual_machine.example.os_disk
 }
+
+
+data "terraform_remote_state" "vm_state" {
+  backend = "remote"
+
+  config = {
+    organization = "your_organization"
+    workspaces {
+      name = "your_workspace"
+    }
+  }
+}
+
+output "referenced_os_disk_properties" {
+  value = data.terraform_remote_state.vm_state.outputs.os_disk_properties
+}

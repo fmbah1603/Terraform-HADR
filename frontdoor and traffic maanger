@@ -1,0 +1,42 @@
+resource "azurerm_frontdoor" "example" {
+  name                = "example-frontdoor"
+  resource_group_name = azurerm_resource_group.example.name
+  tags = {
+    environment = "Production"
+  }
+
+  backend_pool {
+    name             = "traffic-manager-pool"
+    load_balancing   = "Weighted"
+    backend {
+      address       = "${azurerm_traffic_manager_profile.example.fqdn}"
+      http_port     = 80
+      https_port    = 443
+      priority      = 1
+      weight        = 100
+    }
+  }
+
+  routing_rule {
+    name                = "traffic-manager-routing"
+    frontend_endpoints  = ["example-frontend"]
+    accepted_protocols  = ["Http", "Https"]
+    route_configuration {
+      name                            = "traffic-manager-route"
+      backend_pool_name               = "traffic-manager-pool"
+      forwarding_protocol             = "MatchRequest"
+      forwarding_path                 = "/"
+      custom_forwarding_path_pattern = "/*"
+    }
+  }
+}
+
+resource "azurerm_frontdoor_frontend_endpoint" "example" {
+  name                                = "example-frontend"
+  resource_group_name                 = azurerm_resource_group.example.name
+  front_door_name                     = azurerm_frontdoor.example.name
+  host_name                           = "example.com"
+  session_affinity_enabled            = false
+  session_affinity_ttl_seconds        = 0
+  custom_https_provisioning_state     = "Disabled" # Disabling custom HTTPS provisioning
+}

@@ -55,3 +55,20 @@ resource "azurerm_frontdoor_frontend_endpoint" "example" {
   session_affinity_ttl_seconds        = 0
   custom_https_provisioning_state     = "Disabled" # Disabling custom HTTPS provisioning
 }
+
+
+backend_pool_load_balancing {
+    name = "exampleLoadBalancingSettings1"
+  }
+
+  backend_pool_health_probe {
+    name = "exampleHealthProbeSetting1"
+  }
+
+backend_pool_load_balancing {
+    name = "exampleLoadBalancingSettings1"
+  }
+
+  backend_pool_health_probe {
+    name = "exampleHealthProbeSetting1"
+  }

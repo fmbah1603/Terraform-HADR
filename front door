@@ -1,0 +1,117 @@
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "example" {
+  name     = "example-resources"
+  location = "East US"
+}
+
+resource "azurerm_frontdoor" "example" {
+  name                = "example-frontdoor"
+  resource_group_name = azurerm_resource_group.example.name
+  tags = {
+    environment = "Production"
+  }
+
+  routing_rule {
+    name                = "app1-routing"
+    frontend_endpoints  = ["example-frontend"]
+    accepted_protocols  = ["Http", "Https"]
+    route_configuration {
+      name                            = "app1-route"
+      backend_pool_name               = azurerm_frontdoor_backend_pool.app1.name
+      forwarding_protocol             = "MatchRequest"
+      forwarding_path                 = "/"
+      custom_forwarding_path_pattern = "/app1/*"
+    }
+  }
+
+  routing_rule {
+    name                = "app2-routing"
+    frontend_endpoints  = ["example-frontend"]
+    accepted_protocols  = ["Http", "Https"]
+    route_configuration {
+      name                            = "app2-route"
+      backend_pool_name               = azurerm_frontdoor_backend_pool.app2.name
+      forwarding_protocol             = "MatchRequest"
+      forwarding_path                 = "/"
+      custom_forwarding_path_pattern = "/app2/*"
+    }
+  }
+}
+
+resource "azurerm_frontdoor_frontend_endpoint" "example" {
+  name                                = "example-frontend"
+  resource_group_name                 = azurerm_resource_group.example.name
+  front_door_name                     = azurerm_frontdoor.example.name
+  host_name                           = "example.com"
+  session_affinity_enabled            = false
+  session_affinity_ttl_seconds        = 0
+  custom_https_provisioning_state     = "Enabled"
+  custom_https_configuration {
+    certificate_source = "AzureKeyVault"
+    vault_id           = "/subscriptions/<subscription_id>/resourceGroups/<resource_group_name>/providers/Microsoft.KeyVault/vaults/<vault_name>"
+    secret_name        = "<certificate_secret_name>"
+    secret_version     = "<certificate_secret_version>"
+    certificate_type   = "Dedicated"
+  }
+}
+
+resource "azurerm_frontdoor_backend_pool" "app1" {
+  name                = "app1-pool"
+  resource_group_name = azurerm_resource_group.example.name
+  load_balancing_settings {
+    sample_size                 = 4
+    successful_samples_required = 2
+    additional_latency_milliseconds = 200
+  }
+}
+
+resource "azurerm_frontdoor_backend_pool" "app2" {
+  name                = "app2-pool"
+  resource_group_name = azurerm_resource_group.example.name
+  load_balancing_settings {
+    sample_size                 = 4
+    successful_samples_required = 2
+    additional_latency_milliseconds = 200
+  }
+}
+
+resource "azurerm_frontdoor_backend" "app1" {
+  name                    = "app1-backend"
+  resource_group_name     = azurerm_resource_group.example.name
+  frontend_host_header    = "app1.azurewebsites.net"
+  backend_pool_name       = azurerm_frontdoor_backend_pool.app1.name
+  enabled                 = true
+  priority                = 1
+  address                 = "app1.azurewebsites.net"
+  backend_host_header     = "app1.azurewebsites.net"
+  custom_health_probe {
+    path        = "/health"
+    protocol    = "Http"
+    interval    = 30
+    timeout     = 10
+    unhealthy_threshold = 3
+    healthy_threshold   = 2
+  }
+}
+
+resource "azurerm_frontdoor_backend" "app2" {
+  name                    = "app2-backend"
+  resource_group_name     = azurerm_resource_group.example.name
+  frontend_host_header    = "app2.azurewebsites.net"
+  backend_pool_name       = azurerm_frontdoor_backend_pool.app2.name
+  enabled                 = true
+  priority                = 1
+  address                 = "app2.azurewebsites.net"
+  backend_host_header     = "app2.azurewebsites.net"
+  custom_health_probe {
+    path        = "/health"
+    protocol    = "Http"
+    interval    = 30
+    timeout     = 10
+    unhealthy_threshold = 3
+    healthy_threshold   = 2
+  }
+}

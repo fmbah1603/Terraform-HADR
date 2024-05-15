@@ -84,3 +84,19 @@ frontend" defined in the configuration file
 │   with azurerm_frontdoor.frontdoor-hadr,
 │   on frontdoor.tf line 1, in resource "azurerm_frontdoor" "frontdoor-hadr":
 │    1: resource "azurerm_frontdoor" "frontdoor-hadr" {
+
+
+Error: creating Front Door (Subscription: "91da15f8-3ba9-4916-afe1-da3b8651e6d5"
+│ Resource Group Name: "az-ha-dev-usaz-rg"
+│ Front Door Name: "hadr-frontdoor"): performing CreateOrUpdate: frontdoors.FrontDoorsClient#CreateOrUpdate: Failure sending request: StatusCode=0 -- Original Error: Code="RequestDisallowedByPolicy" Message="Resource 'hadr-frontdoor' was disallowed by policy. Policy iden
+tifiers: '[{\"policyAssignment\":{\"name\":\"Not allowed resource types - All Subscriptions\",\"id\":\"/providers/Microsoft.Management/managementGroups/a907e7eb-c591-42de-a930-6f76ac5fe284/providers/Microsoft.Authorization/policyAssignments/38851f9c30714c7688e89567\"},\"
+policyDefinition\":{\"name\":\"Not allowed resource types\",\"id\":\"/providers/Microsoft.Authorization/policyDefinitions/6c112d4e-5bc7-47ae-a041-ea2d9dccd749\"}}]'." Target="hadr-frontdoor" AdditionalInfo=[{"info":{"evaluationDetails":{"evaluatedExpressions":[{"expressi
+on":"type","expressionKind":"Field","expressionValue":"Microsoft.Network/frontDoors","operator":"In","path":"type","result":"True","targetValue":["microsoft.network/frontdoors"]},{"expression":"[field('type')]","expressionKind":"Value","expressionValue":"Microsoft.Networ
+k/frontDoors","operator":"Exists","result":"True","targetValue":"True"}]},"policyAssignmentDisplayName":"Not allowed resource types - All Subscriptions","policyAssignmentId":"/providers/Microsoft.Management/managementGroups/a907e7eb-c591-42de-a930-6f76ac5fe284/providers/
+Microsoft.Authorization/policyAssignments/38851f9c30714c7688e89567","policyAssignmentName":"38851f9c30714c7688e89567","policyAssignmentParameters":{"listOfResourceTypesNotAllowed":["microsoft.network/frontdoors"]},"policyAssignmentScope":"/providers/Microsoft.Management/
+managementGroups/a907e7eb-c591-42de-a930-6f76ac5fe284","policyDefinitionDisplayName":"Not allowed resource types","policyDefinitionEffect":"Deny","policyDefinitionId":"/providers/Microsoft.Authorization/policyDefinitions/6c112d4e-5bc7-47ae-a041-ea2d9dccd749","policyDefin
+itionName":"6c112d4e-5bc7-47ae-a041-ea2d9dccd749","policyExemptionIds":[]},"type":"PolicyViolation"}]
+│
+│   with azurerm_frontdoor.frontdoor-hadr,
+│   on frontdoor.tf line 1, in resource "azurerm_frontdoor" "frontdoor-hadr":
+│    1: resource "azurerm_frontdoor" "frontdoor-hadr" {

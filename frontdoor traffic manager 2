@@ -16,6 +16,13 @@ resource "azurerm_frontdoor" "example" {
       weight        = 100
     }
 
+│ Error: validating Front Door "hadr-frontdoor" (Resource Group "az-ha-dev-usaz-rg"): "routing_rule":"traffic-manager-routing" "frontend_endpoints":"frontdoor-hadr-frontend" was not found in the configuration file. verify you have the "frontend_endpoint":"frontdoor-hadr-
+frontend" defined in the configuration file
+│
+│   with azurerm_frontdoor.frontdoor-hadr,
+│   on frontdoor.tf line 1, in resource "azurerm_frontdoor" "frontdoor-hadr":
+│    1: resource "azurerm_frontdoor" "frontdoor-hadr" {
+
     health_probe {
       protocol                   = "Http"
       path                       = "/"

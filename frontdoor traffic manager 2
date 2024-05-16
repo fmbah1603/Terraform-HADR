@@ -16,6 +16,18 @@ resource "azurerm_frontdoor" "example" {
       weight        = 100
     }
 
+
+ Error: creating Front Door (Subscription: "91da15f8-3ba9-4916-afe1-da3b8651e6d5"
+│ Resource Group Name: "az-ha-dev-usaz-rg"
+│ Front Door Name: "hadr-frontdoor"): performing CreateOrUpdate: frontdoors.FrontDoorsClient#CreateOrUpdate: Failure sending request: StatusCode=0 -- Original Error: Code="B
+adRequest" Message="We couldn't find a DNS record for custom domain hadr-frontdoor.azurefd.net that points to Front Door hadr-frontdoor.azurefd.us.To map a domain to this Fr
+ont Door, create a CNAME record with your DNS provider for custom domain that points to Front Door."
+│
+│   with azurerm_frontdoor.frontdoor-hadr,
+│   on frontdoor.tf line 1, in resource "azurerm_frontdoor" "frontdoor-hadr":
+│    1: resource "azurerm_frontdoor" "frontdoor-hadr" {
+
+
     health_probe {
       protocol                   = "Http"
       path                       = "/"

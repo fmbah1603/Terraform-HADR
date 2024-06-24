@@ -1,0 +1,63 @@
+# resource "azurerm_dns_zone" "hadr-zone" {
+#   name                = "azurefd.net"
+#   resource_group_name = azurerm_resource_group.resourcegroupA.name
+# }
+
+# resource "azurerm_dns_cname_record" "hadr-cname" {
+#   name                = "hadrfrontdoor"
+#   zone_name           = azurerm_dns_zone.hadr-cname.name
+#   resource_group_name = azurerm_resource_group.hadr-cname.name
+#   ttl                 = 300
+#   record             = "hadrfrontdoor.azurefd.net"
+# }
+resource "azurerm_frontdoor" "frontdoor-hadr" {
+  name                = "hadrfrontdoor"
+  resource_group_name = azurerm_resource_group.resourcegroupA.name
+
+  backend_pool {
+    name             = "traffic-manager-pool"
+    backend {
+      address       = "${azurerm_traffic_manager_profile.hadr_traffic_profileA.fqdn}"
+      host_header   = "${azurerm_traffic_manager_profile.hadr_traffic_profileA.fqdn}"
+      http_port     = 80
+      https_port    = 443
+      priority      = 1
+      weight        = 100
+    }
+    health_probe_name = "hadr-fd-health"
+    load_balancing_name = "hadr-lbname"
+   }
+
+  routing_rule {
+    name                = "traffic-manager-routing"
+    frontend_endpoints  = ["hadrFrontendEndpoint1"]
+    accepted_protocols  = ["Http", "Https"]
+    patterns_to_match  = ["/*"]
+    forwarding_configuration {
+      backend_pool_name               = "traffic-manager-pool"
+      forwarding_protocol             = "MatchRequest"
+       }
+  }
+  backend_pool_load_balancing {
+    name = "hadr-lbname"
+  }
+
+  backend_pool_health_probe {
+    name = "hadr-fd-health"
+  }
+  frontend_endpoint {
+    name      = "hadrFrontendEndpoint1"
+    host_name = "hadrfrontdoor.azurefd.us"
+  }
+  depends_on = [ azurerm_traffic_manager_profile.hadr_traffic_profileA, azurerm_resource_group.resourcegroupA ]
+}
+
+# resource "azurerm_frontdoor_frontend_endpoint" "hadr-frontend-endpoint" {
+#   name                                = "hadrFrontendEndpoint1"
+#   resource_group_name                 = azurerm_resource_group.hadr-frontend-endpoint.name
+#   front_door_name                     = azurerm_frontdoor.hadr-frontend-endpoint.name
+#   host_name                           = "hadr-frontend-endpoint.com"
+#   session_affinity_enabled            = false
+#   session_affinity_ttl_seconds        = 0
+#   custom_https_provisioning_state     = "Disabled" # Disabling custom HTTPS provisioning
+# }

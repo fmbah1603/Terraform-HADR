@@ -1,0 +1,492 @@
+include:
+  - '.gitlab-ci-sbx.yml'
+  - '.gitlab-ci-test.yml'
+
+variables:
+  TF_VAR_USERNAME            : ${TF_USERNAME}
+  TF_VAR_PASSWORD            : ${TF_PASSWORD}
+  TF_VAR_ADDRESS             : ${TF_ADDRESS_HUBVPC}
+  TF_VAR_PROJECTID           : ${PROJECT_ID}
+
+  TF_VAR_WEST_SHAREDVPCADDRESS    : ${TF_ADDRESS_WEST_SHAREDVPC}
+  TF_VAR_ADDRESS_EAST             : ${TF_ADDRESS_HUBVPC_EAST}
+  TF_VAR_ADDRESS_SHARED_EAST      : ${TF_ADDRESS_EAST_SHAREDVPC}
+  TF_VAR_WEST_SPOKEVPC    : ${TF_ADDRESS_WEST_SPOKEVPC} 
+  TF_VAR_EAST_SPOKEVPC    : ${TF_ADDRESS_EAST_SPOKEVPC} 
+  TF_VAR_MANAGEMENT        : ${TF_ADDRESS_MANAGEMENT}
+  TF_VAR_SCP_COMMERCIAL    : ${TF_ADDRESS_SCP_COMMERCIAL}
+  TF_VAR_SSO        : ${TF_ADDRESS_SSO}
+  TF_VAR_AWS_ACCESS_KEY_ID_COMMERCIAL  : ${AWS_ACCESS_KEY_ID_COMMERCIAL}
+  TF_VAR_AWS_SECRET_ACCESS_KEY_COMMERCIAL : ${AWS_SECRET_ACCESS_KEY_COMMERCIAL}
+  TF_VAR_AWS_REGION_COMMERCIAL : ${AWS_REGION_COMMERCIAL}
+  KUBERNETES_MEMORY_LIMIT: "2Gi"
+  KUBERNETES_CPU_LIMIT: "2"
+
+ 
+
+stages:
+ - plan
+ - deploy_hub
+ - deploy_spokes
+ - test_spokes
+ - destroy_ec2
+
+default:
+  image:
+    name: tso-common-docker-dev.cfar.nsapps.dcn/cicd/terraform-azure:1.1.2
+    entrypoint:
+      - /usr/bin/env
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+#   cache:
+#     paths:
+#       - .terraform
+
+
+##################################################      
+##  HUBVPC-PLAN-TEST
+################################################## 
+
+gitcheck:
+ stage: plan
+ script: 
+   - echo "Test"
+ only:
+   - pnp
+ tags:
+   - tso
+##################################################      
+##  HUBVPC-APPLY 
+################################################## 
+pnp-east-deploy-hub:
+ stage: deploy_hub
+ variables:
+  REGION : "east" 
+  ENV : "pnp"
+ script: 
+   - sh scripts/terraform-hub.sh
+ only:
+   - pnp
+ tags: 
+   - terraform
+
+pnp-west-deploy-hub:
+ stage: deploy_hub
+ variables:
+  REGION : "west" 
+  ENV : "pnp"
+ script: 
+   - sh scripts/terraform-hub.sh
+ only:
+   - pnp
+ tags: 
+   - terraform  
+
+##################################################      
+##  Shared VPC 
+################################################## 
+
+pnp-east-deploy-sharedvpc:
+ stage: deploy_hub
+ variables:
+  KUBERNETES_MEMORY_LIMIT: "2Gi"
+  KUBERNETES_CPU_LIMIT: "2"
+  CI_DEBUG_TRACE: "true"
+  REGION : "east" 
+  ENV : "pnp"
+ script: 
+   - sh scripts/terraform-sharedvpc.sh
+ only:
+   - pnp
+ needs: ['pnp-east-deploy-hub']
+ tags: 
+   - terraform
+
+pnp-west-deploy-sharedvpc:
+ stage: deploy_hub
+ variables:
+  CI_DEBUG_TRACE: "true"
+  REGION : "west" 
+  ENV : "pnp"
+ script: 
+   - sh scripts/terraform-sharedvpc.sh
+ only:
+   - pnp
+ needs: ['pnp-west-deploy-hub']
+ tags: 
+   - terraform  
+
+
+##################################################      
+##  TGW Cross Region Attachment 
+################################################## 
+
+
+pnp-west-deploy-tgw:
+ stage: deploy_hub
+ variables:
+  CI_DEBUG_TRACE: "true"
+  ENV : "pnp"
+  SOURCE_REGION : "west" 
+  REMOTE_REGION : "east"
+ script: 
+   - sh scripts/terraform-tgw_cross_peering.sh
+ only:
+   - pnp
+ needs: ['pnp-east-deploy-hub', 'pnp-west-deploy-hub']
+ tags: 
+   - terraform
+
+##################################################      
+##  Spoke VPCs
+################################################## 
+
+pnp-east-deploy-spokevpc:
+ stage: deploy_spokes
+ variables:
+  CI_DEBUG_TRACE: "true"
+  REGION : "east" 
+  ENV : "pnp"
+  ACTION : "apply"
+ script: 
+   - sh scripts/terraform-spokevpc.sh
+ only:
+   - pnp
+ needs: ['pnp-east-deploy-sharedvpc']
+ tags: 
+   - terraform
+
+pnp-west-deploy-spokevpc:
+ stage: deploy_spokes
+ variables:
+  CI_DEBUG_TRACE: "true"
+  REGION : "west" 
+  ENV : "pnp"
+  ACTION : "apply"
+ script: 
+   - sh scripts/terraform-spokevpc.sh
+ only:
+   - pnp
+ needs: ['pnp-west-deploy-sharedvpc']
+ tags: 
+   - terraform  
+ 
+##################################################      
+##  Spoke VPC E2 Deploy
+################################################## 
+
+pnp-east-deploy-spokevpc-ec2:
+ stage: deploy_spokes
+ variables:
+  CI_DEBUG_TRACE: "true"
+  REGION : "east" 
+  ENV : "pnp"
+  ACTION : "apply"
+ script: 
+   - sh scripts/terraform-spokevpc-ec2.sh
+ needs: ['pnp-east-deploy-spokevpc']  
+ only:
+   - pnp
+#  when: manual
+
+
+pnp-west-deploy-spokevpc-ec2:
+ stage: deploy_spokes
+ variables:
+  CI_DEBUG_TRACE: "true"
+  REGION : "west" 
+  ENV : "pnp"
+  ACTION : "apply"
+ script: 
+   - sh scripts/terraform-spokevpc-ec2.sh
+ only:
+   - pnp
+#  when: manual
+ needs: ['pnp-west-deploy-spokevpc']
+ tags: 
+   - terraform  
+
+
+
+pnp-spoke-ec2-test-connectivity:
+ stage: test_spokes
+ variables: 
+  ENV : "pnp"
+ artifacts:
+   name: "Spokes Connectivity Test Results"
+   paths: 
+    - platform/connectivity/spokevpc/test_vm/results.json
+ script: 
+   - sh scripts/terraform-spoke_ec2-test.sh
+ needs: ['pnp-east-deploy-spokevpc-ec2', 'pnp-west-deploy-spokevpc-ec2']
+ only:
+   - pnp
+ tags:
+   - tso
+
+
+##################################################      
+##  Spoke VPC E2 Destroy
+################################################## 
+
+# pnp-east-destroy-spokevpc-ec2:
+#  stage: destroy_ec2
+#  variables:
+#   REGION : "east" 
+#   ENV : "pnp"
+#   ACTION : "destroy"
+#  script: 
+#     - sh scripts/sharedvpc-apply.sh
+#  dependencies:
+#     - sharedvpc-east-plan
+#  when: manual
+#  only:
+#    - main
+#  tags:
+#     - tso
+
+
+# ##################################################      
+# ##  SpokeVPC-West-PLAN: 
+# ################################################## 
+
+# spokevpc-west-plan:
+#  stage: plan
+# #  variables:
+# #     PLAN: plan.tfplan
+# #     JSON_PLAN_FILE: tfplan.json
+#  rules:
+#     - changes:
+#       - aws-refactor-wip/govcloud/network/spokevpc/*
+
+#  script: 
+#     - sh scripts/spokevpc-west-plan.sh
+#  artifacts:
+#    #  reports:
+#    #    terraform: aws-refactor-wip/govcloud/network/hubvpc/${JSON_PLAN_FILE}
+#     name: "spokevpc-west-plan-result"
+#     paths:
+#       - aws-refactor-wip/govcloud/network/spokevpc/tfplan
+#       - aws-refactor-wip/govcloud/network/spokevpc/.terraform
+#       - aws-refactor-wip/govcloud/network/spokevpc/.terraform.lock.hcl
+#  tags:
+#     - tso
+
+
+# ##################################################      
+# ##  SpokeVPC-East-PLAN: 
+# # To run this, edit sharedvpc main provider region from west to east
+# ################################################## 
+
+# spokevpc-east-plan:
+#  stage: plan
+# #  variables:
+# #     PLAN: plan.tfplan
+# #     JSON_PLAN_FILE: tfplan.json
+#  rules:
+#     - changes:
+#       - aws-refactor-wip/govcloud/network/spokevpc/*
+
+#  script: 
+#     - sh scripts/spokevpc-east-plan.sh
+#  artifacts:
+#    #  reports:
+#    #    terraform: aws-refactor-wip/govcloud/network/hubvpc/${JSON_PLAN_FILE}
+#     name: "spokevpc-east-plan-result"
+#     paths:
+#       - aws-refactor-wip/govcloud/network/spokevpc/tfplan
+#       - aws-refactor-wip/govcloud/network/spokevpc/.terraform
+#       - aws-refactor-wip/govcloud/network/spokevpc/.terraform.lock.hcl
+#  tags:
+#     - tso
+
+# ##################################################      
+# ##  SpokeVPC-APPLY 
+# ################################################## 
+
+# spokevpc-apply:
+#  stage: apply
+#  rules:
+#    - changes:
+#       - aws-refactor-wip/govcloud/network/spokevpc/*
+#  script: 
+#     - sh scripts/spokevpc-apply.sh
+#  dependencies:
+#     - spokevpc-east-plan
+#  when: manual
+# #  only:
+# #    - main
+#  tags:
+#     - tso
+
+
+# ##################################################      
+# ##  MANAGEMENT-SCP-PLAN: 
+# ################################################## 
+
+# mgmtscp-plan:
+#  stage: plan
+# #  variables:
+# #     PLAN: plan.tfplan
+# #     JSON_PLAN_FILE: tfplan.json
+#  rules:
+#     - changes:
+#       - aws-refactor-wip/modules/scp/*
+
+#  script: 
+#     - sh scripts/scp-plan.sh
+#  artifacts:
+#    #  reports:
+#    #    terraform: aws-refactor-wip/govcloud/network/hubvpc/${JSON_PLAN_FILE}
+#     name: "scp-plan-result"
+#     paths:
+#       - aws-refactor-wip/modules/scp/tfplan
+#       - aws-refactor-wip/modules/scp/.terraform
+#       - aws-refactor-wip/modules/scp/.terraform.lock.hcl
+#  tags:
+#     - tso
+
+# ##################################################      
+# ##  MANAGEMENT-SCP-APPLY 
+# ################################################## 
+
+# mgmtscp-apply:
+#  stage: apply
+#  rules:
+#    - changes:
+#       - aws-refactor-wip/modules/scp/*
+#  script: 
+#     - sh scripts/scp-apply.sh
+#  dependencies:
+#     - mgmtscp-plan
+#  when: manual
+# #  only:
+# #    - main
+#  tags:
+#     - tso
+
+# # ###################################################################################      
+# # ## Management SCP-DESTROY 
+# # ####################################################################################
+
+
+# # terraform-destroy:
+# #  stage: destroy
+# #  rules:
+# #    - changes:
+# #       - aws-refactor-wip/modules/scp/*
+# #  script: 
+# #     - sh scripts/hubvpc-destroy.sh
+# #  dependencies:
+# #     - hubvpc-plan
+# #  when: manual
+# #  tags:
+# #     - tso
+
+
+# ##################################################      
+# ##  COMMERCIAL-SCP-PLAN: 
+# ################################################## 
+
+# commercial-plan:
+#  stage: plan
+# #  variables:
+# #     PLAN: plan.tfplan
+# #     JSON_PLAN_FILE: tfplan.json
+#  rules:
+#     - changes:
+#       - aws-refactor-wip/modules/scp/commercial/*
+
+#  script: 
+#     - sh scripts/scp-commercial-plan.sh
+#  artifacts:
+#    #  reports:
+#    #    terraform: aws-refactor-wip/govcloud/network/hubvpc/${JSON_PLAN_FILE}
+#     name: "scp-commercial-plan-result"
+#     paths:
+#       - aws-refactor-wip/modules/scp/commercial/tfplan
+#       - aws-refactor-wip/modules/scp/commercial/.terraform
+#       - aws-refactor-wip/modules/scp/commercial/.terraform.lock.hcl
+#  tags:
+#     - tso
+
+# ##################################################      
+# ##  MANAGEMENT-SCP-APPLY 
+# ################################################## 
+
+# commercial-apply:
+#  stage: apply
+#  rules:
+#    - changes:
+#       - aws-refactor-wip/modules/scp/commercial/*
+#  script: 
+#     - sh scripts/scp-commercial-apply.sh
+#  dependencies:
+#     - commercial-plan
+#  when: manual
+# #  only:
+# #    - main
+#  tags:
+#     - tso
+
+##################################################      
+##  SSO-PLAN: 
+################################################## 
+
+# sso-plan:
+#  stage: plan
+# #  variables:
+# #     PLAN: plan.tfplan
+# #     JSON_PLAN_FILE: tfplan.json
+#  rules:
+#     - changes:
+#       - aws-refactor-wip/modules/sso/
+
+#  script: 
+#     - sh scripts/sso-plan.sh
+#  artifacts:
+#    #  reports:
+#    #    terraform: aws-refactor-wip/govcloud/network/hubvpc/${JSON_PLAN_FILE}
+#     name: "sso-plan-result"
+#     paths:
+#       - aws-refactor-wip/modules/sso/tfplan
+#       - aws-refactor-wip/modules/sso/.terraform
+#       - aws-refactor-wip/modules/sso/.terraform.lock.hcl
+#  tags:
+#     - tso
+
+##################################################      
+##  SSO-APPLY 
+################################################## 
+
+# sso-apply:
+#  stage: apply
+#  rules:
+#    - changes:
+#       - aws-refactor-wip/modules/sso/
+#  script: 
+#     - sh scripts/sso-apply.sh
+#  dependencies:
+#     - sso-plan
+#  when: manual
+#  tags:
+#     - tso
+#  only:
+#    - pnp
+
+
+pnp-west-destroy-spokevpc-ec2:
+ stage: destroy_ec2
+ variables:
+  CI_DEBUG_TRACE: "true"
+  REGION : "west" 
+  ENV : "pnp"
+  ACTION : "destroy"
+ script: 
+   - sh scripts/terraform-spokevpc-ec2.sh
+ only:
+   - pnp
+ when: manual
+ needs: ['pnp-spoke-ec2-test-connectivity']
+ tags: 
+   - terraform  
+
